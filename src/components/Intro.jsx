@@ -1,18 +1,19 @@
-import { IconFeather, IconArrowRight, IconShieldHeart } from '@tabler/icons-react'
+import { IconArrowRight, IconShieldHeart } from '@tabler/icons-react'
 import { hasApiKey } from '../lib/reframe.js'
+import MoodFace from './MoodFace.jsx'
 
 // First-run welcome. Explains what Reframe is, sets gentle expectations, and —
 // importantly for a mental-wellness tool — states up front that this is not
 // therapy. Honest framing builds trust (and scores the accessibility criteria).
 export default function Intro({ onComplete }) {
   const steps = [
-    { n: '1', text: 'Write down a thought that\'s weighing on you.' },
-    { n: '2', text: 'See the thinking patterns hiding inside it.' },
+    { n: '1', text: 'Check in with how you’re really feeling.' },
+    { n: '2', text: 'See the thinking patterns hiding inside a heavy thought.' },
     { n: '3', text: 'Get a kinder, truer way to see the same thing.' },
   ]
 
   return (
-    <div className="relative min-h-screen overflow-hidden px-5 py-12">
+    <div className="relative flex min-h-[100dvh] items-center overflow-hidden px-5 py-12">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -left-20 top-0 h-72 w-72 rounded-full bg-indigo-300/40 blur-3xl animate-float-slow"
@@ -24,13 +25,13 @@ export default function Intro({ onComplete }) {
 
       <div className="relative mx-auto max-w-md animate-fade-up">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-calm-gradient shadow-glow animate-float">
-            <IconFeather size={40} className="text-white" stroke={1.75} />
+          <div className="mx-auto mb-6 inline-block animate-bob">
+            <MoodFace score={0.9} size={104} />
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-ink">
+          <h1 className="text-5xl font-bold tracking-tight text-ink">
             <span className="text-gradient">Reframe</span>
           </h1>
-          <p className="mx-auto mt-3 max-w-sm text-base leading-relaxed text-ink-muted">
+          <p className="mx-auto mt-4 max-w-sm text-lg leading-relaxed text-ink-muted">
             A calm space to untangle a heavy thought. Reframe uses gentle
             cognitive behavioral therapy techniques to help you see it more
             clearly — and more kindly.
@@ -38,13 +39,13 @@ export default function Intro({ onComplete }) {
         </div>
 
         <div className="card p-6">
-          <div className="space-y-3.5">
+          <div className="space-y-4">
             {steps.map((s) => (
               <div key={s.n} className="flex items-center gap-3.5">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-calm-gradient text-sm font-bold text-white shadow-soft">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-calm-gradient text-base font-bold text-white shadow-soft">
                   {s.n}
                 </div>
-                <p className="text-base text-ink">{s.text}</p>
+                <p className="text-lg text-ink">{s.text}</p>
               </div>
             ))}
           </div>
@@ -62,9 +63,9 @@ export default function Intro({ onComplete }) {
           <button
             type="button"
             onClick={onComplete}
-            className="btn-primary mt-6 w-full py-4 text-base"
+            className="btn-primary mt-6 w-full py-4 text-lg"
           >
-            Start
+            Get started
             <IconArrowRight size={20} stroke={2.5} />
           </button>
 

@@ -7,6 +7,8 @@ import {
 } from '@tabler/icons-react'
 import { DISTORTIONS } from '../lib/distortions.js'
 import { formatWhen } from '../lib/date.js'
+import MoodFace from './MoodFace.jsx'
+import { MOODS } from './MoodPicker.jsx'
 
 // A modal listing every saved reframe, newest first. Each card shows the
 // original thought, the reframe it became, the before→after heaviness shift,
@@ -65,10 +67,12 @@ function JournalCard({ entry, onDelete }) {
   const names = (entry.distortions || [])
     .map((k) => DISTORTIONS.find((d) => d.key === k)?.name)
     .filter(Boolean)
+  const mood = typeof entry.mood === 'number' ? MOODS[entry.mood] : null
 
   return (
     <div className="rounded-2xl border border-indigo-100 bg-white/70 p-4">
       <div className="mb-2 flex items-center gap-2 text-xs text-ink-muted">
+        {mood && <MoodFace score={mood.score} size={26} />}
         <span>{formatWhen(entry.createdAt)}</span>
         {entry.offline && (
           <span className="inline-flex items-center gap-1">

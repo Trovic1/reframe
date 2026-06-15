@@ -23,14 +23,15 @@ const DISTORTION_KEYS = DISTORTIONS.map((d) => `"${d.key}" (${d.name})`).join(',
 
 const SYSTEM_PROMPT = `You are a warm, grounded cognitive behavioral therapy (CBT) coach helping someone reframe a distressing thought. You are NOT a therapist and must never diagnose. Your tone is gentle, human, and non-clinical — like a wise, kind friend who knows CBT.
 
-The user shares a negative or anxious thought. You help them see it more clearly and kindly using CBT.
+The user shares a negative or anxious thought, often along with extra context about their mood, what life areas it touches, what feels underneath it, and how heavy it feels. USE that context to make every field specific to THEM — reference the areas and feelings they named rather than staying generic.
 
 You must respond with ONLY valid JSON — no prose, no markdown fences — with exactly these fields:
-- "validation": string. One or two warm sentences that acknowledge the feeling as real and understandable. Never dismiss it. Do NOT start with "It sounds like".
+- "validation": string. One or two warm sentences that acknowledge the feeling as real and understandable, ideally nodding to the specific context they shared. Never dismiss it. Do NOT start with "It sounds like".
 - "distortions": array of 0-3 strings, each EXACTLY one of these keys: ${DISTORTION_KEYS}. Only include distortions genuinely present in the thought. Use the key, not the name.
 - "evidence": string. 1-2 gentle sentences inviting a balanced look at the facts — what's actually known vs. assumed. Pose it softly, not as a lecture.
 - "reframe": string. A kinder, more accurate, BELIEVABLE alternative thought written in the user's first person ("I ..."). It should not be toxic positivity — keep it realistic and compassionate.
 - "reflection": string. One short, open question for the user to sit with.
+- "encouragement": string. One short, warm closing line (max ~12 words) to celebrate that they checked in.
 
 Keep every field concise. Write at a calm, accessible reading level. If the thought is already balanced and healthy, gently affirm it and return an empty distortions array.`
 
@@ -45,15 +46,21 @@ export function hasApiKey() {
 /**
  * Reframe a distressing thought.
  * @param {string} thought
- * @returns {Promise<{validation:string, distortions:string[], evidence:string, reframe:string, reflection:string, offline?:boolean}>}
+ * @param {string} [context]  Extra context gathered by the check-in (mood,
+ *                            life areas, heaviness, etc.) to personalise the reframe.
+ * @returns {Promise<{validation:string, distortions:string[], evidence:string, reframe:string, reflection:string, encouragement?:string, offline?:boolean}>}
  */
-export async function reframeThought(thought) {
+export async function reframeThought(thought, context = '') {
   const text = thought.trim()
   if (!text) throw new ReframeError('Write down the thought first.')
 
   if (!hasApiKey()) {
     return localReframe(text)
   }
+
+  const userContent = context
+    ? `Context about how they're doing:\n${context}\n\nThe thought:\n"${text}"\n\nReframe it as JSON.`
+    : `The thought:\n"${text}"\n\nReframe it as JSON.`
 
   let res
   try {
@@ -70,7 +77,7 @@ export async function reframeThought(thought) {
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: `The thought:\n"${text}"\n\nReframe it as JSON.` },
+          { role: 'user', content: userContent },
         ],
       }),
     })
@@ -126,6 +133,7 @@ function parseReframe(content) {
     evidence: String(data.evidence ?? '').trim(),
     reframe: String(data.reframe ?? '').trim(),
     reflection: String(data.reflection ?? '').trim(),
+    encouragement: String(data.encouragement ?? '').trim(),
   }
 
   if (!out.reframe) {
@@ -165,5 +173,6 @@ function localReframe(text) {
       'This is one hard moment and a strong feeling — not the whole, fixed truth about me or how things will turn out.',
     reflection:
       'If a close friend told you this exact thought, what would you gently say back to them?',
+    encouragement: 'You showed up for yourself today — that matters.',
   }
 }

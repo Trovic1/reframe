@@ -1,27 +1,34 @@
 import { useEffect, useState } from 'react'
-import { IconFeather, IconNotebook } from '@tabler/icons-react'
 import Intro from './components/Intro.jsx'
-import ThoughtComposer from './components/ThoughtComposer.jsx'
+import Home from './components/Home.jsx'
+import CheckInFlow from './components/CheckInFlow.jsx'
 import ReframeResult from './components/ReframeResult.jsx'
+import Celebration from './components/Celebration.jsx'
 import JournalView from './components/JournalView.jsx'
-import StatsBar from './components/StatsBar.jsx'
 import CrisisBanner from './components/CrisisBanner.jsx'
 import { loadState, saveState, makeId } from './lib/storage.js'
 import { reframeThought, ReframeError } from './lib/reframe.js'
 import { detectCrisis } from './lib/safety.js'
-import { greeting } from './lib/date.js'
+import { buildContext } from './lib/checkin.js'
+
+// Phases of the app:
+//   'home'    — dashboard
+//   'checkin' — the guided, animated question flow
+//   'result'  — the AI reframe, with the after-heaviness check
+//   'celebrate' — confetti payoff after saving
+const PHASES = { HOME: 'home', CHECKIN: 'checkin', RESULT: 'result', CELEBRATE: 'celebrate' }
 
 export default function App() {
   const [state, setState] = useState(loadState)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  // The thought currently being worked on, and its reframe once it arrives.
-  const [draft, setDraft] = useState(null) // { thought, heavyBefore }
-  const [result, setResult] = useState(null)
-  const [crisis, setCrisis] = useState(null) // { thought, heavyBefore } awaiting confirm
+  const [phase, setPhase] = useState(PHASES.HOME)
+
+  // Work-in-progress for the current check-in.
+  const [answers, setAnswers] = useState(null) // the gathered check-in answers
+  const [result, setResult] = useState(null) // the AI reframe
+  const [lastDelta, setLastDelta] = useState(null) // { before, after } for celebration
+  const [crisis, setCrisis] = useState(null) // pending { thought, answers }
   const [journalOpen, setJournalOpen] = useState(false)
 
-  // Persist on every change.
   useEffect(() => {
     saveState(state)
   }, [state])
@@ -30,65 +37,74 @@ export default function App() {
     setState((s) => ({ ...s, onboarded: true }))
   }
 
-  // Run the reframe for a thought we've already cleared past the crisis check.
-  async function runReframe(thought, heavyBefore) {
-    setLoading(true)
-    setError('')
-    setDraft({ thought, heavyBefore })
+  // Run the reframe for a thought that has passed the crisis check.
+  async function runReframe(thought, context) {
     try {
-      const r = await reframeThought(thought)
-      setResult(r)
+      return await reframeThought(thought, context)
     } catch (err) {
       const msg =
-        err instanceof ReframeError
-          ? err.message
-          : 'Something went wrong. Please try again.'
-      setError(msg)
-      setDraft(null)
-    } finally {
-      setLoading(false)
+        err instanceof ReframeError ? err.message : 'Something went wrong. Please try again.'
+      throw new Error(msg)
     }
   }
 
-  // From the composer: check for crisis language first, then reframe.
-  function handleSubmit(thought, heavyBefore) {
-    setError('')
-    if (detectCrisis(thought)) {
-      setCrisis({ thought, heavyBefore })
-      return
-    }
-    runReframe(thought, heavyBefore)
+  // CheckInFlow finished and produced a reframe.
+  function handleCheckInComplete(reframe, gathered) {
+    setResult(reframe)
+    setAnswers(gathered)
+    setPhase(PHASES.RESULT)
   }
 
-  function continuePastCrisis() {
+  // CheckInFlow detected crisis language on the thought.
+  function handleCrisis(thought, gathered) {
+    setCrisis({ thought, answers: gathered })
+  }
+
+  // The user chose to continue past the crisis banner: finish the reframe.
+  async function continuePastCrisis() {
     const pending = crisis
     setCrisis(null)
-    if (pending) runReframe(pending.thought, pending.heavyBefore)
+    if (!pending) return
+    setAnswers(pending.answers)
+    // We re-enter the flow's submit by going straight to a reframe here.
+    try {
+      const reframe = await runReframe(pending.thought, buildContext(pending.answers))
+      handleCheckInComplete(reframe, pending.answers)
+    } catch {
+      setPhase(PHASES.HOME)
+    }
   }
 
-  // Save the current reframe to the journal and return to the composer.
+  // Save the reframe + all the check-in context to the journal, then celebrate.
   function saveEntry(heavyAfter) {
     const entry = {
       id: makeId(),
       createdAt: new Date().toISOString(),
-      thought: draft.thought,
-      heavyBefore: draft.heavyBefore ?? null,
+      thought: answers.thought.trim(),
+      mood: answers.mood ?? null,
+      categories: answers.categories || [],
+      drivers: answers.drivers || [],
+      energy: answers.energy ?? null,
+      sleep: answers.sleep ?? null,
+      heavyBefore: answers.heaviness ?? null,
       heavyAfter: heavyAfter ?? null,
       validation: result.validation,
       evidence: result.evidence,
       reframe: result.reframe,
       reflection: result.reflection,
+      encouragement: result.encouragement || '',
       distortions: result.distortions || [],
       offline: Boolean(result.offline),
     }
     setState((s) => ({ ...s, entries: [entry, ...s.entries] }))
-    startOver()
+    setLastDelta({ before: entry.heavyBefore, after: entry.heavyAfter })
+    setPhase(PHASES.CELEBRATE)
   }
 
-  function startOver() {
+  function resetFlow() {
     setResult(null)
-    setDraft(null)
-    setError('')
+    setAnswers(null)
+    setPhase(PHASES.HOME)
   }
 
   function deleteEntry(id) {
@@ -100,64 +116,55 @@ export default function App() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Decorative floating blobs */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-indigo-300/30 blur-3xl animate-float-slow"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-20 top-72 h-64 w-64 rounded-full bg-violet-300/30 blur-3xl animate-float"
-      />
+    <>
+      {phase === PHASES.HOME && (
+        <Home
+          entries={state.entries}
+          onStart={() => setPhase(PHASES.CHECKIN)}
+          onOpenJournal={() => setJournalOpen(true)}
+        />
+      )}
 
-      <div className="relative mx-auto max-w-lg px-5 py-8 sm:py-10">
-        {/* Header */}
-        <header className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-calm-gradient shadow-glow">
-              <IconFeather size={22} className="text-white" stroke={1.75} />
-            </span>
-            <div>
-              <p className="text-sm font-medium text-ink-muted">{greeting()}</p>
-              <h1 className="text-2xl font-extrabold leading-none tracking-tight">
-                <span className="text-gradient">Reframe</span>
-              </h1>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setJournalOpen(true)}
-            aria-label="Open journal"
-            className="btn-ghost rounded-2xl px-3.5 py-3"
-          >
-            <IconNotebook size={20} stroke={1.75} />
-          </button>
-        </header>
+      {phase === PHASES.CHECKIN && (
+        <CheckInFlow
+          runReframe={runReframe}
+          detectCrisis={detectCrisis}
+          onComplete={handleCheckInComplete}
+          onCrisis={handleCrisis}
+          onExit={resetFlow}
+        />
+      )}
 
-        {/* Progress across saved reframes */}
-        {state.entries.length > 0 && !result && (
-          <div className="mb-6">
-            <StatsBar entries={state.entries} />
-          </div>
-        )}
-
-        {/* Compose, or the reframe result */}
-        {result ? (
+      {phase === PHASES.RESULT && result && (
+        <div className="relative mx-auto max-w-2xl px-5 py-8 sm:py-12">
           <ReframeResult
-            thought={draft.thought}
+            thought={answers.thought.trim()}
             result={result}
-            heavyBefore={draft.heavyBefore}
+            answers={answers}
+            heavyBefore={answers.heaviness}
             onSave={saveEntry}
-            onStartOver={startOver}
+            onStartOver={resetFlow}
           />
-        ) : (
-          <ThoughtComposer onSubmit={handleSubmit} loading={loading} error={error} />
-        )}
-      </div>
+        </div>
+      )}
+
+      {phase === PHASES.CELEBRATE && (
+        <Celebration
+          heavyBefore={lastDelta?.before}
+          heavyAfter={lastDelta?.after}
+          encouragement={result?.encouragement}
+          onDone={resetFlow}
+        />
+      )}
 
       {crisis && (
-        <CrisisBanner onClose={() => setCrisis(null)} onContinue={continuePastCrisis} />
+        <CrisisBanner
+          onClose={() => {
+            setCrisis(null)
+            setPhase(PHASES.HOME)
+          }}
+          onContinue={continuePastCrisis}
+        />
       )}
       {journalOpen && (
         <JournalView
@@ -166,6 +173,6 @@ export default function App() {
           onDelete={deleteEntry}
         />
       )}
-    </div>
+    </>
   )
 }

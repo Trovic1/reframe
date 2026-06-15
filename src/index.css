@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -21,10 +21,24 @@
     background-attachment: fixed;
   }
 
+  /* Big, friendly display headings — the "screenshot" look. */
+  h1, h2, .font-display {
+    font-family: theme('fontFamily.display');
+    letter-spacing: -0.02em;
+  }
+
   /* Visible, on-brand focus ring. */
   *:focus-visible {
     outline: 2px solid theme('colors.indigo.400');
     outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
   }
 }
 
@@ -49,9 +63,19 @@
   }
 
   .field {
-    @apply w-full rounded-xl border-2 border-indigo-100 bg-white px-4 py-3 text-base
+    @apply w-full rounded-2xl border-2 border-indigo-100 bg-white px-4 py-3.5 text-lg
            text-ink transition-colors placeholder:text-ink-muted
            focus:border-indigo-300 focus:bg-indigo-50/40;
+  }
+
+  /* Selectable pill, used for categories / drivers. */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border-2 border-indigo-100 bg-white
+           px-4 py-2.5 text-base font-semibold text-ink transition-all duration-150
+           hover:border-indigo-200 active:scale-95;
+  }
+  .chip-active {
+    @apply border-transparent bg-calm-gradient text-white shadow-soft;
   }
 
   /* Gradient text accent. */

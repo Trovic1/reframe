@@ -53,6 +53,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Fredoka', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         // Slightly larger, more confident type scale
@@ -105,6 +106,28 @@ export default {
           '0%': { transform: 'translateX(-120%)' },
           '100%': { transform: 'translateX(120%)' },
         },
+        // Splash transition between questions.
+        'splash-in': {
+          '0%': { opacity: '0', transform: 'scale(0.85)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'step-in': {
+          '0%': { opacity: '0', transform: 'translateX(24px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        'confetti-fall': {
+          '0%': { transform: 'translateY(-12vh) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'translateY(108vh) rotate(720deg)', opacity: '1' },
+        },
+        'bob': {
+          '0%, 100%': { transform: 'translateY(0) rotate(-3deg)' },
+          '50%': { transform: 'translateY(-10px) rotate(3deg)' },
+        },
+        'ring-pulse': {
+          '0%': { transform: 'scale(0.9)', opacity: '0.7' },
+          '70%': { transform: 'scale(1.35)', opacity: '0' },
+          '100%': { transform: 'scale(1.35)', opacity: '0' },
+        },
       },
       animation: {
         pop: 'pop 0.45s ease-out',
@@ -114,6 +137,10 @@ export default {
         'float-slow': 'float 13s ease-in-out infinite',
         'gradient-pan': 'gradient-pan 6s ease infinite',
         shimmer: 'shimmer 2.2s ease-in-out infinite',
+        'splash-in': 'splash-in 0.5s cubic-bezier(0.22,1,0.36,1) both',
+        'step-in': 'step-in 0.4s cubic-bezier(0.22,1,0.36,1) both',
+        bob: 'bob 5s ease-in-out infinite',
+        'ring-pulse': 'ring-pulse 2.2s ease-out infinite',
       },
     },
   },

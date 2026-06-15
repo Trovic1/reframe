@@ -5,13 +5,21 @@
 //   entries: [{
 //     id, createdAt,
 //     thought,                 // the original distressing thought
-//     heavyBefore,             // 1-5, how heavy it felt before (optional)
-//     heavyAfter,              // 1-5, how heavy after the reframe (optional)
-//     validation, evidence, reframe, reflection,
+//     mood,                    // 0-4 mood index at check-in (optional)
+//     categories,              // string[] life-area keys (optional)
+//     drivers,                 // string[] what's underneath it (optional)
+//     energy,                  // 1-10 energy (optional)
+//     sleep,                   // hours slept (optional)
+//     heavyBefore,             // 1-10, how heavy it felt before (optional)
+//     heavyAfter,              // 1-10, how heavy after the reframe (optional)
+//     validation, evidence, reframe, reflection, encouragement,
 //     distortions: string[],   // canonical distortion keys
 //     offline: boolean         // produced without the AI?
 //   }]
 // }
+//
+// Older entries (heavyBefore/After on a 1-5 scale, no mood/categories) still
+// load and render fine — every new field is optional.
 
 const STORAGE_KEY = 'reframe.v1'
 
